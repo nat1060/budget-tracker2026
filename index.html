@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Monthly Budget Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --border: #d0d5dd;
+      --danger: #b42318;
+      --danger-bg: #fee4e2;
+      --good: #027a48;
+      --good-bg: #dcfae6;
+      --warn: #b54708;
+      --warn-bg: #fef0c7;
+      --primary: #175cd3;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 20px;
+      background: #101828;
+      color: white;
+    }
+
+
+    main { max-width: 1280px; margin: auto; padding: 20px; }
+    h1, h2, h3 { margin-top: 0; }
+    .grid { display: grid; gap: 16px; }
+    .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 2px rgba(16,24,40,.06);
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+    textarea { min-height: 40px; resize: vertical; }
+    button {
+      cursor: pointer;
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+    button.secondary { background: white; color: var(--text); border-color: var(--border); }
+    button.danger { background: var(--danger); border-color: var(--danger); }
+    button.small { padding: 6px 8px; font-size: 12px; width: auto; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric { padding: 14px; border-radius: 10px; background: #f9fafb; border: 1px solid var(--border); }
+    .metric .value { font-size: 22px; font-weight: 700; margin-top: 6px; }
+    .good { color: var(--good); }
+    .danger-text { color: var(--danger); }
+    .warn-text { color: var(--warn); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #f9fafb; color: var(--muted); font-size: 12px; }
+    tr.negative { background: var(--danger-bg); }
+    tr.income { border-left: 4px solid var(--good); }
+    tr.expense { border-left: 4px solid var(--danger); }
+    tr.transfer { border-left: 4px solid var(--primary); }
+    .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .alert { padding: 10px; border-radius: 8px; margin-bottom: 8px; border: 1px solid; }
+    .alert.danger { background: var(--danger-bg); color: var(--danger); border-color: #fda29b; }
+    .alert.warn { background: var(--warn-bg); color: var(--warn); border-color: #fedf89; }
+    .progress-wrap { background: #eaecf0; border-radius: 999px; overflow: hidden; height: 18px; }
+    .progress-bar { height: 100%; background: var(--primary); width: 0%; transition: width .2s; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; align-items: end; }
+    .span-2 { grid-column: span 2; } .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; } .span-12 { grid-column: span 12; }
+    @media (max-width: 900px) { .cols-2, .cols-3, .summary { grid-template-columns: 1fr; } .row > * { grid-column: span 12 !important; } }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Monthly Budget Tracker</h1>
+  <div class="muted" style="color:#d0d5dd">Income, expenses, transfers, recurring items, charts, alerts, and local browser persistence.</div>
+  <div class="muted" style="color:#d0d5dd">Authored by Nathan Slippen via Claude Code and IntelliJ</div>
+</header>
+
+<!--
+  ╔════════════════════════════════════════════════════════════════════════════╗
+  ║                   MONTHLY BUDGET TRACKER - DOCUMENTATION                   ║
+  ╚════════════════════════════════════════════════════════════════════════════╝
+
+  APPLICATION OVERVIEW:
+  ---------------------
+  A comprehensive client-side budget tracking application built with vanilla HTML, 
+  CSS, and JavaScript. All data is stored locally in the browser using localStorage, 
+  requiring no backend or database. Features include transaction management, 
+  recurring items, visual charts, alerts, and data export/import capabilities.
+
+  KEY FEATURES:
+  • Multiple account management with running balances
+  • Income, expense, and transfer transaction tracking
+  • Month-by-month budget views
+  • Recurring transaction templates
+  • Visual analytics (charts and graphs)
+  • Automated alerts and reminders
+  • Budget target tracking with progress indicators
+  • JSON export/import for backup and portability
+  • Fully responsive design for mobile and desktop
+
+  DATA PERSISTENCE:
+  • Storage Key: 'browserBudgetTracker.v1'
+  • Storage Method: localStorage (browser-based, no server required)
+  • Auto-save: All changes are automatically persisted
+  • Portability: Export/import via JSON format
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 1: BUDGET CONTROLS & MONTH SELECTOR
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Primary control panel for selecting the viewing month, setting budget targets,
+  and exporting data.
+
+  COMPONENTS:
+
+  1.1 Budget Month
+      • Control Type: Month picker
+      • Default: Current month
+      • Function: Filters all transactions, charts, and calculations to show
+        only data from the selected month
+      • Behavior: Changing the month triggers a full re-render of all sections
+
+  1.2 Monthly Expense Target
+      • Control Type: Number input (with decimal support)
+      • Purpose: Set a spending limit for the selected month
+      • Usage: Enter desired monthly expense budget (e.g., 3500.00)
+      • Integration: Powers the "Expense Target Progress" section
+      • Persistence: Targets are stored per-month
+
+  1.3 Save Target Button
+      • Action: Saves the expense target for the currently selected month
+      • Effect: Updates progress bar and percentage calculations
+
+  1.4 Export JSON Button
+      • Action: Downloads all application data as a JSON file
+      • File Name: 'budget-tracker-backup.json'
+      • Contents: Accounts, transactions, recurring items, budget targets
+      • Use Case: Backup, migration, or sharing data between devices
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 2: ACCOUNT CARDS
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Manage financial accounts and monitor their balances.
+
+  DEFAULT ACCOUNTS:
+  • Checking 1, Checking 2, Checking 3 (customizable)
+
+  CARD COMPONENTS:
+
+  2.1 Account Name
+      • Type: Editable text input
+      • Function: Rename accounts (e.g., "Chase Checking", "Savings")
+      • Auto-update: Changes reflect immediately in all dropdowns and tables
+
+  2.2 Opening Balance
+      • Type: Number input (decimal support)
+      • Purpose: Set the starting balance for calculations
+      • Scope: Applies to the beginning of time, not per-month
+      • Important: All running balances build upon this value
+
+  2.3 Current Running Balance
+      • Type: Read-only metric display
+      • Calculation: Opening balance + all income - all expenses - transfers out
+        + transfers in, up through the selected month
+      • Color Coding:
+        - Green: Positive balance
+        - Red: Negative balance (overdraft)
+      • Format: USD currency with thousands separators
+
+  BEHAVIOR:
+  • Dynamically generated from state.accounts array
+  • Changes to name or balance trigger account select refresh
+  • Running balances update with any transaction change
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 3: ADD / EDIT TRANSACTION
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Primary interface for creating and modifying financial transactions.
+
+  TRANSACTION TYPES:
+
+  3.1 Income
+      • Definition: Money added to an account
+      • Examples: Paycheck, refund, bonus, gift
+      • Effect on Balance: Increases account balance
+
+  3.2 Expense
+      • Definition: Money spent from an account
+      • Examples: Rent, utilities, groceries, entertainment
+      • Effect on Balance: Decreases account balance
+
+  3.3 Transfer
+      • Definition: Money moved between accounts
+      • Examples: Savings deposit, account rebalancing
+      • Effect on Balance: Decreases source account, increases destination account
+      • Special: Requires both "From Account" and "To Account"
+
+  FORM FIELDS:
+
+  • Type (Required): Dropdown selection of income/expense/transfer
+  • Name (Required): Brief transaction identifier
+  • Description (Optional): Additional notes or context
+  • Date (Required): Transaction date (past, present, or future)
+  • Amount (Required): Positive decimal value
+  • Account/From Account (Required): Source account
+  • To Account (Conditional): Destination for transfers only
+
+  WORKFLOWS:
+
+  Creating a Transaction:
+  1. Select transaction type
+  2. Fill required fields
+  3. Click "Save Transaction"
+  4. Form clears automatically
+
+  Editing a Transaction:
+  1. Click "Edit" button in Transactions table
+  2. Form populates with transaction data
+  3. Page scrolls to form
+  4. Modify fields
+  5. Click "Save Transaction" to update
+
+  VALIDATION:
+  • Name, Date, and Amount must be provided
+  • Amount must be > 0
+  • Transfer accounts must be different
+  • Alert shown on validation failure
+
+  DYNAMIC BEHAVIOR:
+  • Selecting "Transfer" reveals "To Account" field
+  • "Account" label changes to "From Account" for transfers
+  • Clear button resets form to defaults
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 4: ALERTS / REMINDERS
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Automatic monitoring system that warns users about financial issues and 
+  upcoming obligations.
+
+  ALERT TYPES:
+
+  4.1 Negative Balance (Danger)
+      • Trigger: Account balance drops below $0
+      • Color: Red background
+      • Message: "{Account Name} is negative: {Amount}"
+      • Priority: Critical
+
+  4.2 Low Balance (Warning)
+      • Trigger: Account balance is positive but below $100
+      • Color: Yellow background
+      • Message: "{Account Name} is below $100: {Amount}"
+      • Priority: Caution
+
+  4.3 Upcoming Recurring Item (Warning)
+      • Trigger: Recurring transaction due within 7 days
+      • Color: Yellow background
+      • Message: "{Item Name} is due in {X} day(s): {Amount}"
+      • Purpose: Reminds users to prepare for upcoming bills/income
+
+  DISPLAY:
+  • Alerts stack vertically
+  • Updates automatically when month or data changes
+  • Shows "No alerts" message when no issues detected
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 5: EXPENSE TARGET PROGRESS
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Visual progress indicator showing spending against monthly budget target.
+
+  COMPONENTS:
+
+  5.1 Progress Bar
+      • Type: Animated horizontal bar
+      • Width: Percentage of target spent (capped at 100%)
+      • Color: Blue
+      • Animation: Smooth transition on updates
+
+  5.2 Progress Text
+      • Format: "{Spent} spent of {Target} target ({Percentage}%)"
+      • Example: "$2,450.00 spent of $3,500.00 target (70%)"
+      • No Target: "Set a monthly expense target to show progress."
+
+  CALCULATION:
+  • Numerator: Sum of all expense transactions in selected month
+  • Denominator: Monthly expense target for selected month
+  • Formula: (Total Expenses / Target) × 100
+
+  BEHAVIOR:
+  • Only counts expense-type transactions
+  • Ignores income and transfers
+  • Updates in real-time with transaction changes
+  • Per-month: Each month can have different targets
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 6: INCOME VS EXPENSES CHART
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Bar chart visualization comparing total income and expenses for the 
+  selected month.
+
+  TECHNOLOGY:
+  • Library: Chart.js (loaded from CDN)
+  • Chart Type: Vertical bar chart
+
+  DATA:
+  • Bar 1 (Income): Sum of all income transactions
+  • Bar 2 (Expenses): Sum of all expense transactions
+  • Transfers: Excluded from this chart
+
+  FEATURES:
+  • Responsive sizing
+  • Legend disabled (labels self-explanatory)
+  • Month label shown in dataset
+  • Auto-refresh on data or month change
+
+  USE CASES:
+  • Quick visual comparison of cash flow
+  • Identify months with overspending
+  • Track income vs expense trends over time
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 7: EXPENSES BY ACCOUNT CHART
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Doughnut chart showing the breakdown of expenses across all accounts.
+
+  TECHNOLOGY:
+  • Library: Chart.js
+  • Chart Type: Doughnut (pie with center hole)
+
+  DATA:
+  • Segments: One per account
+  • Values: Total expense transactions per account
+  • Labels: Account names
+
+  FEATURES:
+  • Color-coded by account
+  • Responsive sizing
+  • Interactive legend
+  • Hover shows exact amounts
+
+  USE CASES:
+  • Identify which accounts have highest spending
+  • Visualize expense distribution
+  • Compare account usage patterns
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 8: TRANSACTIONS TABLE
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Comprehensive list of all transactions for the selected month with 
+  running balance calculations.
+
+  COLUMNS:
+
+  8.1 Date
+      • Format: YYYY-MM-DD
+      • Sortable: Transactions display in chronological order
+
+  8.2 Type
+      • Values: income, expense, or transfer
+      • Visual: Color-coded border (green/red/blue)
+
+  8.3 Name
+      • Content: User-defined transaction name
+      • HTML-escaped for security
+
+  8.4 Description
+      • Content: Optional details
+      • Display: Empty if not provided
+
+  8.5 Account
+      • Single transaction: Account name
+      • Transfer: "From Account → To Account"
+
+  8.6 Amount
+      • Format: USD currency
+      • Always positive value
+
+  8.7 Running Balance
+      • Calculation: Account balance after this transaction
+      • Considers: All prior transactions chronologically
+      • Color: Red background if negative
+
+  8.8 Actions
+      • Edit Button: Loads transaction into form
+      • Delete Button: Removes transaction (with confirmation)
+
+  ROW STYLING:
+  • Left border color indicates type
+  • Red background for negative balance rows
+  • Hover effects for interactivity
+
+  EMPTY STATE:
+  • Message: "No transactions for this month."
+  • Displayed when no transactions exist for selected month
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 9: RECURRING INCOME / EXPENSES
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Template system for automatic creation of regular monthly transactions 
+  (bills, paychecks, subscriptions).
+
+  WORKFLOW:
+
+  9.1 Define Recurring Item
+      Form Fields:
+      • Type: Income or Expense
+      • Name: Description (e.g., "Rent", "Monthly Salary")
+      • Description: Optional details
+      • Day of Month: 1-31 (automatically adjusts for month length)
+      • Amount: Positive decimal value
+      • Account: Which account this affects
+
+  9.2 Add Recurring Item
+      • Button: "Add Recurring Item"
+      • Action: Saves template to recurring items list
+      • No Transactions Created Yet: Template only
+
+  9.3 Apply to Selected Month
+      • Button: "Apply to Selected Month"
+      • Action: Creates actual transactions from all recurring templates
+      • Date Calculation: Uses selected month + day from template
+      • Duplicate Prevention: Won't create if transaction already exists
+      • Month Adjustment: Days > month length use last day (e.g., 31 → 28 for Feb)
+
+  RECURRING ITEMS TABLE:
+  • Displays all saved templates
+  • Columns: Type, Name, Day, Account, Amount, Actions
+  • Delete: Removes template (doesn't affect created transactions)
+
+  USE CASES:
+  • Monthly rent/mortgage
+  • Regular paycheck income
+  • Subscription services
+  • Loan payments
+  • Utilities with predictable amounts
+
+  IMPORTANT NOTES:
+  • Templates are month-agnostic
+  • Must manually apply each month
+  • Tracks recurringId to prevent duplicates
+  • Deleting template doesn't delete past transactions
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  SECTION 10: BACKUP / RESTORE
+  ────────────────────────────────────────────────────────────────────────────
+  
+  PURPOSE:
+  Data portability and recovery system for migrating or backing up all 
+  application data.
+
+  COMPONENTS:
+
+  10.1 Import JSON Textarea
+       • Purpose: Paste previously exported JSON data
+       • Size: Large text area for full JSON content
+
+  10.2 Import JSON Button
+       • Action: Parses and restores data from textarea
+       • Validation: Checks for required fields (accounts, transactions)
+       • On Success: Replaces current data and refreshes UI
+       • On Failure: Shows error alert
+       • Warning: Overwrites ALL current data
+
+  EXPORT PROCESS (from Section 1):
+  1. Click "Export JSON" button
+  2. Browser downloads JSON file
+  3. File contains complete application state
+
+  IMPORT PROCESS:
+  1. Open exported JSON file in text editor
+  2. Copy entire contents
+  3. Paste into import textarea
+  4. Click "Import JSON"
+  5. Confirm replacement if prompted
+
+  JSON STRUCTURE:
+  {
+    "accounts": [ {id, name, openingBalance}, ... ],
+    "transactions": [ {id, type, name, description, date, amount, ...}, ... ],
+    "recurring": [ {id, type, name, day, amount, account}, ... ],
+    "budgetTargets": { "2026-01": 3500, "2026-02": 3200, ... }
+  }
+
+  USE CASES:
+  • Backup before major changes
+  • Migrate between browsers/devices
+  • Share data with accountant
+  • Version control for financial data
+  • Disaster recovery
+
+  SECURITY NOTE:
+  • JSON contains sensitive financial data
+  • Store exported files securely
+  • Don't share publicly
+
+  ════════════════════════════════════════════════════════════════════════════
+
+  TECHNICAL IMPLEMENTATION NOTES
+  ────────────────────────────────────────────────────────────────────────────
+
+  STATE MANAGEMENT:
+  • Single source of truth: `state` object
+  • Structure: {accounts, transactions, recurring, budgetTargets}
+  • Persistence: Auto-save to localStorage on every change
+  • Load: On page initialization
+
+  RENDERING PIPELINE:
+  1. User action triggers change
+  2. State updated
+  3. persist() saves to localStorage
+  4. render() function called
+  5. All sections re-render from current state
+
+  KEY FUNCTIONS:
+  • loadState(): Retrieves data from localStorage or returns defaults
+  • persist(): Saves current state to localStorage
+  • render(): Master render function that calls all section renderers
+  • monthTransactions(): Filters transactions for selected month
+  • getBalances(): Calculates running balances for all accounts
+
+  RESPONSIVE DESIGN:
+  • Grid-based layout
+  • Mobile breakpoint: 900px
+  • Stacks columns vertically on small screens
+  • Touch-friendly button sizes
+
+  BROWSER COMPATIBILITY:
+  • Requires: localStorage support
+  • Requires: ES6+ JavaScript features
+  • Requires: Modern CSS (Grid, CSS Variables)
+  • Chart.js loaded from CDN
+
+  DATA VALIDATION:
+  • Client-side only (no server)
+  • Form validation on submission
+  • HTML5 input constraints (min, max, step, required)
+  • JavaScript validation for business logic
+
+  ════════════════════════════════════════════════════════════════════════════
+-->
+
+<main class="grid">
+  <section class="card">
+    <div class="row">
+      <div class="span-3">
+        <label for="monthFilter">Budget Month</label>
+        <input id="monthFilter" type="month" />
+      </div>
+      <div class="span-3">
+        <label for="monthlyBudget">Monthly expense target</label>
+        <input id="monthlyBudget" type="number" min="0" step="0.01" placeholder="Example: 3500.00" />
+      </div>
+      <div class="span-3">
+        <button onclick="saveBudgetTarget()">Save Target</button>
+      </div>
+      <div class="span-3">
+        <button class="secondary" onclick="exportData()">Export JSON</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid cols-3" id="accountCards"></section>
+
+  <!--
+    ========================================
+    Add / Edit Transaction Section
+    ========================================
+    
+    OVERVIEW:
+    This section provides a form interface for creating new financial transactions 
+    or editing existing ones. It supports three transaction types: income, expense, 
+    and transfer between accounts.
+    
+    TRANSACTION TYPES:
+    • Income - Records money added to an account (e.g., paycheck, refund)
+    • Expense - Records money spent from an account (e.g., rent, utilities)
+    • Transfer - Records money moved between accounts (e.g., checking to savings)
+    
+    FORM FIELDS:
+    • Type (Dropdown, Required) - Select income, expense, or transfer
+    • Name (Text, Required) - Brief name for the transaction (e.g., "Paycheck", "Rent")
+    • Description (Text, Optional) - Additional details about the transaction
+    • Date (Date, Required) - Date the transaction occurred or will occur
+    • Amount (Number, Required) - Transaction amount (must be positive, supports decimals)
+    • Account/From Account (Dropdown, Required) - Source account (label changes for transfers)
+    • To Account (Dropdown, Conditional) - Destination account (only visible for transfers)
+    
+    BEHAVIOR:
+    Creating a Transaction:
+    1. Select the transaction type
+    2. Fill in required fields (Name, Date, Amount, Account)
+    3. Optionally add a description
+    4. Click "Save Transaction"
+    
+    Editing a Transaction:
+    1. Click the "Edit" button on any transaction in the Transactions table
+    2. The form populates with that transaction's data
+    3. Modify fields as needed
+    4. Click "Save Transaction" to update
+    
+    Dynamic Field Visibility:
+    When "Transfer" is selected as the type:
+    • The "Account" label changes to "From Account"
+    • The "To Account" field becomes visible
+    • Both accounts must be different to save successfully
+    
+    VALIDATION RULES:
+    • Name, Date, and Amount are required
+    • Amount must be greater than zero
+    • For transfers, From Account and To Account must be different
+    • All transactions are saved to browser local storage automatically
+    
+    INTEGRATION:
+    Saved transactions appear in:
+    • The Transactions table below
+    • Income vs Expenses chart
+    • Expenses by Account chart
+    • Account running balance calculations
+    • Alerts and budget progress tracking
+    ========================================
+  -->
+  <section class="card">
+    <h2>Add / Edit Transaction</h2>
+    <input id="editingId" type="hidden" />
+    <div class="row">
+      <div class="span-2">
+        <label>Type</label>
+        <select id="txType" onchange="toggleTransferFields()">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+          <option value="transfer">Transfer</option>
+        </select>
+      </div>
+      <div class="span-3">
+        <label>Name</label>
+        <input id="txName" placeholder="Paycheck, Rent, Utilities" />
+      </div>
+      <div class="span-3">
+        <label>Description</label>
+        <input id="txDesc" placeholder="Optional details" />
+      </div>
+      <div class="span-2">
+        <label>Date</label>
+        <input id="txDate" type="date" />
+      </div>
+      <div class="span-2">
+        <label>Amount</label>
+        <input id="txAmount" type="number" min="0" step="0.01" placeholder="0.00" />
+      </div>
+      <div class="span-3 from-account">
+        <label id="fromLabel">Account</label>
+        <select id="fromAccount"></select>
+      </div>
+      <div class="span-3 to-account" style="display:none">
+        <label>To Account</label>
+        <select id="toAccount"></select>
+      </div>
+      <div class="span-3">
+        <button onclick="saveTransaction()">Save Transaction</button>
+      </div>
+      <div class="span-3">
+        <button class="secondary" onclick="resetTransactionForm()">Clear</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid cols-2">
+    <div class="card">
+      <h2>Alerts / Reminders</h2>
+      <div id="alerts"></div>
+    </div>
+    <div class="card">
+      <h2>Expense Target Progress</h2>
+      <div class="progress-wrap"><div id="expenseProgress" class="progress-bar"></div></div>
+      <p id="progressText" class="muted"></p>
+    </div>
+  </section>
+
+  <section class="grid cols-2">
+    <div class="card">
+      <h2>Income vs Expenses</h2>
+      <canvas id="barChart"></canvas>
+    </div>
+    <div class="card">
+      <h2>Expenses by Account</h2>
+      <canvas id="pieChart"></canvas>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Transactions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Type</th><th>Name</th><th>Description</th><th>Account</th><th>Amount</th><th>Running Balance</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="txTable"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Recurring Income / Expenses</h2>
+    <div class="row">
+      <div class="span-2">
+        <label>Type</label>
+        <select id="recType"><option value="income">Income</option><option value="expense">Expense</option></select>
+      </div>
+      <div class="span-3"><label>Name</label><input id="recName" placeholder="Rent, loan, paycheck" /></div>
+      <div class="span-3"><label>Description</label><input id="recDesc" placeholder="Optional details" /></div>
+      <div class="span-2"><label>Day of Month</label><input id="recDay" type="number" min="1" max="31" value="1" /></div>
+      <div class="span-2"><label>Amount</label><input id="recAmount" type="number" min="0" step="0.01" /></div>
+      <div class="span-3"><label>Account</label><select id="recAccount"></select></div>
+      <div class="span-3"><button onclick="addRecurring()">Add Recurring Item</button></div>
+      <div class="span-3"><button class="secondary" onclick="applyRecurringForMonth()">Apply to Selected Month</button></div>
+    </div>
+    <br />
+    <table>
+      <thead><tr><th>Type</th><th>Name</th><th>Day</th><th>Account</th><th>Amount</th><th>Actions</th></tr></thead>
+      <tbody id="recTable"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>Backup / Restore</h2>
+    <div class="row">
+      <div class="span-9"><label>Paste exported JSON to restore</label><textarea id="importBox"></textarea></div>
+      <div class="span-3"><button onclick="importData()">Import JSON</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const STORAGE_KEY = 'browserBudgetTracker.v1';
+
+  let state = loadState();
+  let barChart, pieChart;
+
+  function defaultState() {
+    return {
+      accounts: [
+        { id: 'checking1', name: 'Checking 1', openingBalance: 0 },
+        { id: 'checking2', name: 'Checking 2', openingBalance: 0 },
+        { id: 'checking3', name: 'Checking 3', openingBalance: 0 }
+      ],
+      transactions: [],
+      recurring: [],
+      budgetTargets: {}
+    };
+  }
+
+  function loadState() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultState();
+    } catch { return defaultState(); }
+  }
+
+  function persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function money(n) {
+    return Number(n || 0).toLocaleString(undefined, { style: 'currency', currency: 'USD' });
+  }
+
+  function todayMonth() {
+    return new Date().toISOString().slice(0, 7);
+  }
+
+  function selectedMonth() {
+    return document.getElementById('monthFilter').value || todayMonth();
+  }
+
+  function txMonth(tx) { return tx.date.slice(0, 7); }
+  function uid() { return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()); }
+
+  function init() {
+    document.getElementById('monthFilter').value = todayMonth();
+    document.getElementById('txDate').value = new Date().toISOString().slice(0, 10);
+    refreshAccountSelects();
+    render();
+  }
+
+  function refreshAccountSelects() {
+    ['fromAccount', 'toAccount', 'recAccount'].forEach(id => {
+      const el = document.getElementById(id);
+      el.innerHTML = state.accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+    });
+  }
+
+  function render() {
+    persist();
+    renderAccounts();
+    renderTransactions();
+    renderRecurring();
+    renderAlerts();
+    renderProgress();
+    renderCharts();
+    document.getElementById('monthlyBudget').value = state.budgetTargets[selectedMonth()] ?? '';
+  }
+
+  function monthTransactions() {
+    return state.transactions.filter(t => txMonth(t) === selectedMonth()).sort((a,b) => a.date.localeCompare(b.date));
+  }
+
+  function accountName(id) {
+    return state.accounts.find(a => a.id === id)?.name || id;
+  }
+
+  function getBalances() {
+    const balances = Object.fromEntries(state.accounts.map(a => [a.id, Number(a.openingBalance || 0)]));
+    state.transactions
+      .filter(t => txMonth(t) <= selectedMonth())
+      .sort((a,b) => a.date.localeCompare(b.date))
+      .forEach(t => {
+        const amt = Number(t.amount);
+        if (t.type === 'income') balances[t.fromAccount] += amt;
+        if (t.type === 'expense') balances[t.fromAccount] -= amt;
+        if (t.type === 'transfer') {
+          balances[t.fromAccount] -= amt;
+          balances[t.toAccount] += amt;
+        }
+      });
+    return balances;
+  }
+
+  function renderAccounts() {
+    const balances = getBalances();
+    document.getElementById('accountCards').innerHTML = state.accounts.map(a => `
+      <div class="card">
+        <label>Account Name</label>
+        <input value="${a.name}" onchange="renameAccount('${a.id}', this.value)" />
+        <label style="margin-top:10px">Opening Balance</label>
+        <input type="number" step="0.01" value="${Number(a.openingBalance).toFixed(2)}" onchange="setOpeningBalance('${a.id}', this.value)" />
+        <div class="metric" style="margin-top:12px">
+          <div class="muted">Current Running Balance</div>
+          <div class="value ${balances[a.id] < 0 ? 'danger-text' : 'good'}">${money(balances[a.id])}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderTransactions() {
+    const month = monthTransactions();
+    const running = Object.fromEntries(state.accounts.map(a => [a.id, Number(a.openingBalance || 0)]));
+    state.transactions
+      .filter(t => txMonth(t) < selectedMonth())
+      .sort((a,b) => a.date.localeCompare(b.date))
+      .forEach(t => applyTxToRunning(t, running));
+
+    document.getElementById('txTable').innerHTML = month.map(t => {
+      applyTxToRunning(t, running);
+      const bal = t.type === 'transfer' ? running[t.fromAccount] : running[t.fromAccount];
+      const acctText = t.type === 'transfer' ? `${accountName(t.fromAccount)} → ${accountName(t.toAccount)}` : accountName(t.fromAccount);
+      return `<tr class="${t.type} ${bal < 0 ? 'negative' : ''}">
+        <td>${t.date}</td><td>${t.type}</td><td>${escapeHtml(t.name)}</td><td>${escapeHtml(t.description || '')}</td>
+        <td>${acctText}</td><td>${money(t.amount)}</td><td>${money(bal)}</td>
+        <td><div class="actions"><button class="small secondary" onclick="editTransaction('${t.id}')">Edit</button><button class="small danger" onclick="deleteTransaction('${t.id}')">Delete</button></div></td>
+      </tr>`;
+    }).join('') || `<tr><td colspan="8" class="muted">No transactions for this month.</td></tr>`;
+  }
+
+  function applyTxToRunning(t, running) {
+    const amt = Number(t.amount);
+    if (t.type === 'income') running[t.fromAccount] += amt;
+    if (t.type === 'expense') running[t.fromAccount] -= amt;
+    if (t.type === 'transfer') { running[t.fromAccount] -= amt; running[t.toAccount] += amt; }
+  }
+
+  function renderRecurring() {
+    document.getElementById('recTable').innerHTML = state.recurring.map(r => `
+      <tr><td>${r.type}</td><td>${escapeHtml(r.name)}</td><td>${r.day}</td><td>${accountName(r.account)}</td><td>${money(r.amount)}</td>
+      <td><button class="small danger" onclick="deleteRecurring('${r.id}')">Delete</button></td></tr>`
+    ).join('') || `<tr><td colspan="6" class="muted">No recurring items yet.</td></tr>`;
+  }
+
+  function renderAlerts() {
+    const alerts = [];
+    const balances = getBalances();
+    Object.entries(balances).forEach(([id, bal]) => {
+      if (bal < 0) alerts.push({ type: 'danger', text: `${accountName(id)} is negative: ${money(bal)}` });
+      else if (bal < 100) alerts.push({ type: 'warn', text: `${accountName(id)} is below $100: ${money(bal)}` });
+    });
+
+    const today = new Date();
+    const month = selectedMonth();
+    state.recurring.forEach(r => {
+      const due = new Date(`${month}-${String(Math.min(r.day, 28)).padStart(2, '0')}T00:00:00`);
+      const days = Math.ceil((due - today) / 86400000);
+      if (days >= 0 && days <= 7) alerts.push({ type: 'warn', text: `${r.name} is due in ${days} day(s): ${money(r.amount)}` });
+    });
+
+    document.getElementById('alerts').innerHTML = alerts.map(a => `<div class="alert ${a.type}">${a.text}</div>`).join('') || `<p class="muted">No alerts for the selected month.</p>`;
+  }
+
+  function renderProgress() {
+    const target = Number(state.budgetTargets[selectedMonth()] || 0);
+    const expense = monthTransactions().filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
+    const pct = target ? Math.min(100, (expense / target) * 100) : 0;
+    document.getElementById('expenseProgress').style.width = pct + '%';
+    document.getElementById('progressText').textContent = target ? `${money(expense)} spent of ${money(target)} target (${pct.toFixed(0)}%).` : 'Set a monthly expense target to show progress.';
+  }
+
+  function renderCharts() {
+    const txs = monthTransactions();
+    const income = txs.filter(t => t.type === 'income').reduce((s,t) => s + Number(t.amount), 0);
+    const expense = txs.filter(t => t.type === 'expense').reduce((s,t) => s + Number(t.amount), 0);
+    const expensesByAccount = state.accounts.map(a => txs.filter(t => t.type === 'expense' && t.fromAccount === a.id).reduce((s,t) => s + Number(t.amount), 0));
+
+    if (barChart) barChart.destroy();
+    if (pieChart) pieChart.destroy();
+
+    barChart = new Chart(document.getElementById('barChart'), {
+      type: 'bar',
+      data: { labels: ['Income', 'Expenses'], datasets: [{ label: selectedMonth(), data: [income, expense] }] },
+      options: { responsive: true, plugins: { legend: { display: false } } }
+    });
+
+    pieChart = new Chart(document.getElementById('pieChart'), {
+      type: 'doughnut',
+      data: { labels: state.accounts.map(a => a.name), datasets: [{ data: expensesByAccount }] },
+      options: { responsive: true }
+    });
+  }
+
+  function toggleTransferFields() {
+    const isTransfer = document.getElementById('txType').value === 'transfer';
+    document.querySelector('.to-account').style.display = isTransfer ? '' : 'none';
+    document.getElementById('fromLabel').textContent = isTransfer ? 'From Account' : 'Account';
+  }
+
+  function saveTransaction() {
+    const id = document.getElementById('editingId').value || uid();
+    const type = document.getElementById('txType').value;
+    const amount = Number(document.getElementById('txAmount').value).toFixed(2);
+    const tx = {
+      id, type,
+      name: document.getElementById('txName').value.trim(),
+      description: document.getElementById('txDesc').value.trim(),
+      date: document.getElementById('txDate').value,
+      amount: Number(amount),
+      fromAccount: document.getElementById('fromAccount').value,
+      toAccount: type === 'transfer' ? document.getElementById('toAccount').value : null
+    };
+
+    if (!tx.name || !tx.date || tx.amount <= 0) return alert('Name, date, and positive amount are required.');
+    if (type === 'transfer' && tx.fromAccount === tx.toAccount) return alert('Transfer accounts must be different.');
+
+    const index = state.transactions.findIndex(t => t.id === id);
+    if (index >= 0) state.transactions[index] = tx; else state.transactions.push(tx);
+    resetTransactionForm();
+    render();
+  }
+
+  function editTransaction(id) {
+    const t = state.transactions.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('editingId').value = t.id;
+    document.getElementById('txType').value = t.type;
+    document.getElementById('txName').value = t.name;
+    document.getElementById('txDesc').value = t.description || '';
+    document.getElementById('txDate').value = t.date;
+    document.getElementById('txAmount').value = Number(t.amount).toFixed(2);
+    document.getElementById('fromAccount').value = t.fromAccount;
+    if (t.toAccount) document.getElementById('toAccount').value = t.toAccount;
+    toggleTransferFields();
+    window.scrollTo({ top: 280, behavior: 'smooth' });
+  }
+
+  function deleteTransaction(id) {
+    if (!confirm('Delete this transaction?')) return;
+    state.transactions = state.transactions.filter(t => t.id !== id);
+    render();
+  }
+
+  function resetTransactionForm() {
+    document.getElementById('editingId').value = '';
+    document.getElementById('txName').value = '';
+    document.getElementById('txDesc').value = '';
+    document.getElementById('txAmount').value = '';
+    document.getElementById('txDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('txType').value = 'income';
+    toggleTransferFields();
+  }
+
+  function addRecurring() {
+    const r = {
+      id: uid(),
+      type: document.getElementById('recType').value,
+      name: document.getElementById('recName').value.trim(),
+      description: document.getElementById('recDesc').value.trim(),
+      day: Number(document.getElementById('recDay').value),
+      amount: Number(Number(document.getElementById('recAmount').value).toFixed(2)),
+      account: document.getElementById('recAccount').value
+    };
+    if (!r.name || r.amount <= 0 || r.day < 1 || r.day > 31) return alert('Recurring item requires name, amount, and day 1-31.');
+    state.recurring.push(r);
+    ['recName','recDesc','recAmount'].forEach(id => document.getElementById(id).value = '');
+    render();
+  }
+
+  function applyRecurringForMonth() {
+    const month = selectedMonth();
+    state.recurring.forEach(r => {
+      const date = `${month}-${String(Math.min(r.day, daysInMonth(month))).padStart(2, '0')}`;
+      const exists = state.transactions.some(t => t.recurringId === r.id && t.date === date);
+      if (!exists) state.transactions.push({ id: uid(), recurringId: r.id, type: r.type, name: r.name, description: r.description, date, amount: r.amount, fromAccount: r.account, toAccount: null });
+    });
+    render();
+  }
+
+  function deleteRecurring(id) {
+    if (!confirm('Delete this recurring item?')) return;
+    state.recurring = state.recurring.filter(r => r.id !== id);
+    render();
+  }
+
+  function daysInMonth(month) {
+    const [y, m] = month.split('-').map(Number);
+    return new Date(y, m, 0).getDate();
+  }
+
+  function renameAccount(id, name) {
+    const acct = state.accounts.find(a => a.id === id);
+    acct.name = name.trim() || acct.name;
+    refreshAccountSelects();
+    render();
+  }
+
+  function setOpeningBalance(id, value) {
+    state.accounts.find(a => a.id === id).openingBalance = Number(Number(value || 0).toFixed(2));
+    render();
+  }
+
+  function saveBudgetTarget() {
+    state.budgetTargets[selectedMonth()] = Number(Number(document.getElementById('monthlyBudget').value || 0).toFixed(2));
+    render();
+  }
+
+  function exportData() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'budget-tracker-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function importData() {
+    try {
+      const imported = JSON.parse(document.getElementById('importBox').value);
+      if (!imported.accounts || !imported.transactions) throw new Error('Invalid backup');
+      state = imported;
+      refreshAccountSelects();
+      render();
+      alert('Import complete.');
+    } catch { alert('Could not import JSON.'); }
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  document.getElementById('monthFilter').addEventListener('change', render);
+  init();
+</script>
+</body>
+</html>
