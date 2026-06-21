@@ -775,11 +775,17 @@
   </section>
 
   <section class="card">
-    <h2>Backup / Restore</h2>
-    <div class="row">
-      <div class="span-9"><label>Paste exported JSON to restore</label><textarea id="importBox"></textarea></div>
-      <div class="span-3"><button onclick="importData()">Import JSON</button></div>
+  <h2>Backup / Restore</h2>
+  <div class="row">
+    <div class="span-6">
+      <label>Import JSON backup file</label>
+      <input id="importFile" type="file" accept="application/json,.json" />
     </div>
+
+    <div class="span-3">
+      <button class="danger" onclick="importDataFromFile()">Import JSON File</button>
+    </div>
+  </div>
   </section>
 </main>
 
@@ -1099,16 +1105,49 @@
     URL.revokeObjectURL(url);
   }
 
-  function importData() {
+  function importDataFromFile() {
+  const fileInput = document.getElementById('importFile');
+  const file = fileInput.files[0];
+
+  if (!file) {
+    alert('Please choose a JSON backup file first.');
+    return;
+  }
+
+  if (!confirm('Importing will overwrite ALL current budget data. Continue?')) {
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function(event) {
     try {
-      const imported = JSON.parse(document.getElementById('importBox').value);
-      if (!imported.accounts || !imported.transactions) throw new Error('Invalid backup');
+      const imported = JSON.parse(event.target.result);
+
+      if (
+        !Array.isArray(imported.accounts) ||
+        !Array.isArray(imported.transactions) ||
+        !Array.isArray(imported.recurring) ||
+        typeof imported.budgetTargets !== 'object'
+      ) {
+        throw new Error('Invalid backup structure');
+      }
+
       state = imported;
+      saveState();
       refreshAccountSelects();
       render();
+
       alert('Import complete.');
-    } catch { alert('Could not import JSON.'); }
+      fileInput.value = '';
+    } catch (error) {
+      alert('Could not import JSON. Please verify this is a valid backup file.');
+    }
+  };
+
+  reader.readAsText(file);
   }
+ 
 
   function escapeHtml(value) {
     return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
