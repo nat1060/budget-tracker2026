@@ -1119,31 +1119,53 @@
   }
 
   const reader = new FileReader();
-
   reader.onload = function(event) {
-    try {
-      const imported = JSON.parse(event.target.result);
+  try {
+    //alert('Step 1: File loaded.');
 
-      if (
-        !Array.isArray(imported.accounts) ||
-        !Array.isArray(imported.transactions) ||
-        !Array.isArray(imported.recurring) ||
-        typeof imported.budgetTargets !== 'object'
-      ) {
-        throw new Error('Invalid backup structure');
-      }
+    const imported = JSON.parse(event.target.result);
+    //alert('Step 2: JSON parsed.');
 
-      state = imported;
-      saveState();
-      refreshAccountSelects();
-      render();
-
-      alert('Import complete.');
-      fileInput.value = '';
-    } catch (error) {
-      alert('Could not import JSON. Please verify this is a valid backup file.');
+    if (
+      !Array.isArray(imported.accounts) ||
+      !Array.isArray(imported.transactions) ||
+      !Array.isArray(imported.recurring) ||
+      typeof imported.budgetTargets !== 'object'
+    ) {
+      throw new Error('Invalid backup structure');
     }
-  };
+
+    //alert(
+    //  `Step 3: Validation passed.\n\n` +
+    //  `Accounts: ${imported.accounts.length}\n` +
+    //  `Transactions: ${imported.transactions.length}\n` +
+    //  `Recurring: ${imported.recurring.length}`
+   // );
+
+    state = imported;
+    //alert('Step 4: State assigned.');
+
+    persist();
+    //alert('Step 5: State saved.');
+
+    refreshAccountSelects();
+    //alert('Step 6: Account selects refreshed.');
+
+    render();
+    //alert('Step 7: Render complete.');
+
+    alert('Import complete.');
+
+    fileInput.value = '';
+
+  } catch (error) {
+    alert(
+      'IMPORT FAILED\n\n' +
+      'Error: ' + error.message + '\n\n' +
+      'Stack: ' + (error.stack || 'Not available')
+    );
+  }
+};
 
   reader.readAsText(file);
   }
